@@ -25,6 +25,7 @@ from optparse import OptionParser
 
 import scipy.misc
 import pylab
+import numpy as np
 
 debug = False
 
@@ -68,7 +69,7 @@ def load_video_info(video_path):
     """
 
     # load ground truth from text file (MILTrack's format)
-    text_files = glob.glob(os.path.join(video_path, "*_gt.txt"))
+    text_files = glob.glob(os.path.join(video_path, "*groundtruth_rect.txt"))
     assert text_files, \
         "No initial position and ground truth (*_gt.txt) to load."
 
@@ -76,7 +77,7 @@ def load_video_info(video_path):
     #f = open(first_file_path, "r")
     #ground_truth = textscan(f, '%f,%f,%f,%f') # [x, y, width, height]
     #ground_truth = cat(2, ground_truth{:})
-    ground_truth = pylab.loadtxt(first_file_path, delimiter=",")
+    ground_truth = pylab.loadtxt(first_file_path, delimiter='\t')
     #f.close()
 
     # set initial position and size
@@ -136,9 +137,10 @@ def load_video_info(video_path):
         #img_files = cellstr(img_files);
     else:
         # no text file, just list all images
-        img_files = glob.glob(os.path.join(video_path, "*.png"))
+        img_path = os.path.join(video_path, "img")
+        img_files = glob.glob(os.path.join(img_path, "*.png"))
         if len(img_files) == 0:
-            img_files = glob.glob(os.path.join(video_path, "*.jpg"))
+            img_files = glob.glob(os.path.join(img_path, "*.jpg"))
 
         assert len(img_files), "Failed to find png or jpg images"
 
@@ -208,7 +210,7 @@ def get_subwindow(im, pos, sz, cos_window):
     #pre-process window --
     # normalize to range -0.5 .. 0.5
     # pixels are already in range 0 to 1
-    out = out.astype(pylab.float64) - 0.5
+    out = out.astype(pylab.float64) / 255 - 0.5
 
     # apply cosine window
     out = pylab.multiply(cos_window, out)
@@ -445,6 +447,7 @@ def track(input_video_path):
 
         # load image
         image_path = os.path.join(video_path, image_filename)
+
         im = pylab.imread(image_path)
         if len(im.shape) == 3 and im.shape[2] > 1:
             im = rgb2gray(im)
@@ -458,6 +461,11 @@ def track(input_video_path):
 
         # extract and pre-process subwindow
         x = get_subwindow(im, pos, sz, cos_window)
+
+        if debug:
+            pylab.figure()
+            pylab.imshow(x)
+            pylab.title("sub window")
 
         is_first_frame = (frame == 0)
 
@@ -543,7 +551,8 @@ def parse_arguments():
         "See http://goo.gl/pSTo9r"
 
     parser.add_option("-i", "--input", dest="video_path",
-                      metavar="PATH", type="string", default=None,
+                      metavar="PATH", type="string",
+                      default='/Users/xiaofeidu/mData/visualTrackingBenchmark_v1.0/CarScale/',
                       help="path to a folder o a MILTrack video")
 
     (options, args) = parser.parse_args()
@@ -560,6 +569,7 @@ def parse_arguments():
 
 def main():
     options = parse_arguments()
+
 
     track(options.video_path)
 
